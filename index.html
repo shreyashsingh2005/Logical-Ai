@@ -5759,8 +5759,8 @@ async function sendMsg(){
       c.title = makeTitleFromText(text || (currentDocument ? currentDocument.name : "")); 
   }
 
-  // Preserve meaningful conversation context (up to 10 valid recent messages)
-  const validMessages = c.messages.filter(m => m.text && m.text.trim().length > 0);
+  // Preserve meaningful conversation context (up to 10 valid recent messages, excluding errors)
+  const validMessages = c.messages.filter(m => m.text && m.text.trim().length > 0 && !m.text.startsWith("⚠️") && !m.text.startsWith("🚨"));
   const historySlice = validMessages.slice(-10);
   let apiPayload = { 
       messages: historySlice.map(m => ({ 
@@ -5802,7 +5802,16 @@ async function sendMsg(){
         return;
     }
     
-    if(!res.ok) throw new Error("Server Error");
+    if(!res.ok) {
+        let errDetail = "";
+        try {
+            const errJson = await res.json();
+            errDetail = errJson.detail || errJson.message || "";
+        } catch(e) {
+            try { errDetail = await res.text(); } catch(e2) {}
+        }
+        throw new Error(errDetail || `Server Error (${res.status})`);
+    }
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder("utf-8");
@@ -5861,7 +5870,10 @@ async function sendMsg(){
             saveChats();
         }
     } else { 
-        const errorMsg = "⚠️ Connection issue or request interrupted. Please verify your AI provider credentials and network connection, then try again."; 
+        let errorMsg = "⚠️ Connection issue or request interrupted. Please verify your AI provider credentials and network connection, then try again."; 
+        if (error && error.message && error.message !== "Server Error") {
+            errorMsg = `⚠️ ${error.message}`;
+        }
         box.classList.add("mood-alert"); 
         setAnswer(box, errorMsg, true); 
         aiMessageObj.text = errorMsg; 

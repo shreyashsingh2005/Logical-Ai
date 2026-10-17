@@ -52,7 +52,7 @@ def get_ai_config() -> dict:
         },
         "gemini": {
             "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
-            "model": "gemini-3.8-flash"
+            "model": "gemini-3.5-flash"
         },
         "anthropic": {
             "base_url": "https://api.anthropic.com/v1",
@@ -132,60 +132,85 @@ async def stream_openai_compatible(
         headers["HTTP-Referer"] = "http://localhost:5173"
         headers["X-Title"] = "Logical AI"
 
-    payload = {
-        "model": model,
-        "messages": messages,
-        "stream": True,
-        "temperature": 0.6
-    }
+    # Candidate models for automatic graceful fallback (especially Gemini quota spikes)
+    if provider == "gemini":
+        gemini_fallbacks = ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash", "gemini-flash-latest"]
+        models_to_try = [model] + [m for m in gemini_fallbacks if m != model]
+    else:
+        models_to_try = [model]
 
-    try:
-        async with client.stream("POST", endpoint, headers=headers, json=payload, timeout=90.0) as response:
-            if response.status_code != 200:
-                error_body = await response.aread()
-                error_text = error_body.decode("utf-8", errors="replace")
-                try:
-                    err_json = json.loads(error_text)
-                    err_msg = err_json.get("error", {}).get("message", error_text)
-                except Exception:
-                    err_msg = error_text
+    last_error_code = 500
+    last_err_msg = ""
+    last_advice = ""
 
-                if response.status_code == 401:
-                    advice = f"Your `{provider}` API key appears to be invalid or expired. Please verify `AI_API_KEY` in your `.env` file."
-                elif response.status_code == 429:
-                    advice = f"Rate limit or quota exceeded for `{provider}`. Please check your credit balance or usage tier on your provider console."
-                elif response.status_code == 404:
-                    advice = f"Model `{model}` was not found by `{provider}`. Check `AI_MODEL` in your `.env` file."
+    for active_model in models_to_try:
+        payload = {
+            "model": active_model,
+            "messages": messages,
+            "stream": True,
+            "temperature": 0.6
+        }
+
+        try:
+            async with client.stream("POST", endpoint, headers=headers, json=payload, timeout=90.0) as response:
+                if response.status_code != 200:
+                    error_body = await response.aread()
+                    error_text = error_body.decode("utf-8", errors="replace")
+                    try:
+                        err_json = json.loads(error_text)
+                        err_msg = err_json.get("error", {}).get("message", error_text)
+                    except Exception:
+                        err_msg = error_text
+
+                    last_error_code = response.status_code
+                    last_err_msg = err_msg
+
+                    if response.status_code == 401:
+                        last_advice = f"Your `{provider}` API key appears to be invalid or expired. Please verify `AI_API_KEY` in your `.env` file."
+                        break
+                    elif response.status_code == 429:
+                        last_advice = f"Rate limit or quota exceeded for `{provider}`. Please check your credit balance or usage tier on your provider console."
+                        continue
+                    elif response.status_code in [404, 503, 500]:
+                        last_advice = f"Model `{active_model}` temporarily unavailable. Attempting backup model."
+                        continue
+                    else:
+                        last_advice = "Verify your provider configuration in `.env`."
+                        break
+
+                async for line in response.aiter_lines():
+                    if not line:
+                        continue
+                    line_str = line.strip()
+                    if line_str.startswith("data:"):
+                        data_str = line_str[5:].strip()
+                        if data_str == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data_str)
+                            choices = chunk.get("choices", [])
+                            if choices:
+                                delta = choices[0].get("delta", {})
+                                content = delta.get("content")
+                                if content:
+                                    yield content.encode("utf-8")
+                        except json.JSONDecodeError:
+                            continue
+                return
+        except (httpx.ConnectError, httpx.TimeoutException) as net_err:
+            if active_model == models_to_try[-1]:
+                if isinstance(net_err, httpx.ConnectError):
+                    yield f"⚠️ **Connection Failed:** Could not reach AI provider endpoint at `{endpoint}`. Check your internet connection and `AI_BASE_URL` in `.env`.".encode("utf-8")
                 else:
-                    advice = "Verify your provider configuration in `.env`."
-
-                yield f"🚨 **AI Provider Error ({response.status_code}):** {err_msg}\n\n💡 *Note:* {advice}".encode("utf-8")
+                    yield f"⚠️ **Request Timeout:** The AI provider took too long to respond. Please try again.".encode("utf-8")
+                return
+        except Exception as e:
+            if active_model == models_to_try[-1]:
+                yield f"⚠️ **AI Service Error:** {str(e)}".encode("utf-8")
                 return
 
-            async for line in response.aiter_lines():
-                if not line:
-                    continue
-                line_str = line.strip()
-                if line_str.startswith("data:"):
-                    data_str = line_str[5:].strip()
-                    if data_str == "[DONE]":
-                        break
-                    try:
-                        chunk = json.loads(data_str)
-                        choices = chunk.get("choices", [])
-                        if choices:
-                            delta = choices[0].get("delta", {})
-                            content = delta.get("content")
-                            if content:
-                                yield content.encode("utf-8")
-                    except json.JSONDecodeError:
-                        continue
-    except httpx.ConnectError:
-        yield f"⚠️ **Connection Failed:** Could not reach AI provider endpoint at `{endpoint}`. Check your internet connection and `AI_BASE_URL` in `.env`.".encode("utf-8")
-    except httpx.TimeoutException:
-        yield f"⚠️ **Request Timeout:** The AI provider took too long to respond. Please try again.".encode("utf-8")
-    except Exception as e:
-        yield f"⚠️ **AI Service Error:** {str(e)}".encode("utf-8")
+    # If all models in the fallback chain were exhausted
+    yield f"🚨 **AI Provider Error ({last_error_code}):** {last_err_msg}\n\n💡 *Note:* {last_advice}".encode("utf-8")
 
 async def stream_anthropic(
     client: httpx.AsyncClient,
