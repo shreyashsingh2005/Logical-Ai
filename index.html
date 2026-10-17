@@ -2929,48 +2929,453 @@ body.light * {
     scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
 }
 
-/* ================= 🔐 AUTH OVERLAY & CARD ================= */
+/* ================= 🔐 PREMIUM AUTH OVERLAY & CARD ================= */
 #authOverlay,
 .auth-overlay {
     position: fixed !important;
-    top: 0; left: 0; 
+    top: 0; 
+    left: 0; 
     width: 100vw; 
     height: 100vh; 
     height: 100dvh;
-    background: rgba(6, 7, 10, 0.85);
-    backdrop-filter: blur(16px); 
-    -webkit-backdrop-filter: blur(16px);
+    background: rgba(8, 12, 20, 0.72);
+    backdrop-filter: blur(14px); 
+    -webkit-backdrop-filter: blur(14px);
     z-index: 10000;
     display: flex; 
     align-items: center; 
     justify-content: center;
-    transition: opacity 0.25s ease;
+    transition: opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.24s;
     padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
     box-sizing: border-box;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+body.light #authOverlay,
+body.light .auth-overlay {
+    background: rgba(240, 244, 250, 0.75);
 }
 
 .auth-card {
-    background: var(--card);
-    padding: clamp(22px, 5.5vw, 40px);
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    box-shadow: var(--3d-shadow);
-    width: 100%;
-    max-width: 400px;
-    text-align: center;
     position: relative;
+    background: var(--card, #0f1523);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 22px;
+    box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
+    width: 100%;
+    max-width: 420px;
+    max-height: min(92dvh, 640px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: clamp(24px, 5vw, 34px);
     box-sizing: border-box;
+    text-align: left;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+    animation: authCardIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes authCardIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.auth-card.shake {
+    animation: authShake 0.38s ease-in-out;
+}
+
+@keyframes authShake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+}
+
+/* Subtle glowing accent hairline along top of card */
+.auth-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20px;
+    right: 20px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--g1, #00f2fe), var(--g3, #4facfe), transparent);
+    opacity: 0.85;
+    border-radius: 2px;
 }
 
 body.light .auth-card {
     background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+body.light .auth-card::before {
+    opacity: 0.95;
+}
+
+/* Auth Header */
+.auth-header {
+    text-align: center;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.auth-brand-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(0, 242, 254, 0.12), rgba(79, 172, 254, 0.08));
+    border: 1px solid rgba(0, 242, 254, 0.25);
+    box-shadow: 0 8px 20px -4px rgba(0, 242, 254, 0.25);
+    margin-bottom: 12px;
+}
+
+body.light .auth-brand-badge {
+    background: linear-gradient(135deg, rgba(0, 242, 254, 0.1), rgba(79, 172, 254, 0.15));
+    border-color: rgba(0, 114, 255, 0.25);
+    box-shadow: 0 8px 20px -4px rgba(0, 114, 255, 0.15);
+}
+
+.auth-brand-badge svg {
+    width: 26px;
+    height: 26px;
+}
+
+.auth-title {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: var(--text, #ffffff);
+    margin: 0 0 6px 0;
+    line-height: 1.25;
+}
+
+body.light .auth-title {
+    color: #0f172a;
+}
+
+.auth-subtitle {
+    font-size: 13.5px;
+    color: var(--muted, #94a3b8);
+    margin: 0;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+body.light .auth-subtitle {
+    color: #64748b;
+}
+
+/* Segmented Mode Switcher Tabs */
+.auth-tabs {
+    display: flex;
+    background: var(--input, rgba(255, 255, 255, 0.04));
+    padding: 3px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 20px;
+    gap: 2px;
+}
+
+body.light .auth-tabs {
+    background: #f1f5f9;
     border-color: #e2e8f0;
-    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15);
+}
+
+.auth-tab {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: var(--muted, #94a3b8);
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    font-family: inherit;
+    text-align: center;
+}
+
+body.light .auth-tab {
+    color: #64748b;
+}
+
+.auth-tab:hover {
+    color: var(--text, #ffffff);
+}
+
+body.light .auth-tab:hover {
+    color: #0f172a;
+}
+
+.auth-tab.active {
+    background: var(--card, #121824);
+    color: var(--text, #ffffff);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.light .auth-tab.active {
+    background: #ffffff;
+    color: #0f172a;
+    border-color: rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* Form Groups & Inputs */
+.auth-form-group {
+    margin-bottom: 16px;
+}
+
+.auth-label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text, #e2e8f0);
+    margin-bottom: 7px;
+    letter-spacing: -0.01em;
+}
+
+body.light .auth-label {
+    color: #334155;
+}
+
+.auth-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.auth-input-icon {
+    position: absolute;
+    left: 13px;
+    width: 18px;
+    height: 18px;
+    color: var(--muted, #64748b);
+    pointer-events: none;
+    transition: color 0.18s ease;
 }
 
 .auth-card input {
+    width: 100%;
+    height: 44px;
+    padding: 0 14px 0 40px;
+    background: var(--input, rgba(255, 255, 255, 0.04));
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+    border-radius: 12px;
+    color: var(--text, #ffffff);
+    font-size: 14px;
+    outline: none;
+    transition: all 0.18s ease;
     box-sizing: border-box;
     font-family: inherit;
+}
+
+body.light .auth-card input {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+
+.auth-card input:focus {
+    border-color: var(--g1, #00f2fe);
+    box-shadow: 0 0 0 3px rgba(0, 242, 254, 0.18);
+    background: var(--card, #121824);
+}
+
+body.light .auth-card input:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.auth-card input:focus + .auth-input-icon,
+.auth-input-container:focus-within .auth-input-icon {
+    color: var(--g1, #00f2fe);
+}
+
+body.light .auth-input-container:focus-within .auth-input-icon {
+    color: #0284c7;
+}
+
+.auth-card input::placeholder {
+    color: var(--muted, #64748b);
+    opacity: 0.75;
+}
+
+/* Password Toggle Button */
+.auth-input-container.has-toggle input {
+    padding-right: 42px;
+}
+
+.auth-pw-toggle-btn {
+    position: absolute;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--muted, #94a3b8);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: color 0.18s ease, background-color 0.18s ease;
+}
+
+.auth-pw-toggle-btn:hover {
+    color: var(--text, #ffffff);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+body.light .auth-pw-toggle-btn:hover {
+    color: #0f172a;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.auth-pw-toggle-btn svg {
+    width: 17px;
+    height: 17px;
+}
+
+/* Alert / Error Banner */
+.auth-alert {
+    display: none;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 10px 12px;
+    border-radius: 11px;
+    background: rgba(245, 87, 108, 0.12);
+    border: 1px solid rgba(245, 87, 108, 0.35);
+    color: #ff6b81;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    margin-bottom: 16px;
+    animation: authAlertFade 0.2s ease-out;
+}
+
+body.light .auth-alert {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+}
+
+@keyframes authAlertFade {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.auth-alert-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    margin-top: 1.5px;
+}
+
+/* Submit Primary Button */
+.auth-submit-btn {
+    width: 100%;
+    height: 45px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--g1, #00f2fe), var(--g2, #4facfe));
+    color: #ffffff;
+    font-size: 14.5px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 18px rgba(0, 242, 254, 0.3);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    margin-top: 4px;
+    margin-bottom: 18px;
+}
+
+.auth-submit-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 22px rgba(0, 242, 254, 0.42);
+    filter: brightness(1.04);
+}
+
+.auth-submit-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.auth-submit-btn:disabled {
+    opacity: 0.75;
+    cursor: not-allowed;
+    filter: grayscale(0.2);
+}
+
+.auth-spinner {
+    display: none;
+    width: 17px;
+    height: 17px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: authSpin 0.7s linear infinite;
+}
+
+@keyframes authSpin {
+    to { transform: rotate(360deg); }
+}
+
+.auth-submit-btn.loading .auth-spinner {
+    display: inline-block;
+}
+
+/* Footer Switching Link */
+.auth-footer {
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted, #94a3b8);
+    margin: 0;
+}
+
+body.light .auth-footer {
+    color: #64748b;
+}
+
+.auth-toggle-link {
+    background: none;
+    border: none;
+    color: var(--g1, #00f2fe);
+    font-size: 13px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 6px;
+    text-decoration: none;
+    transition: opacity 0.15s ease, text-decoration 0.15s ease;
+}
+
+body.light .auth-toggle-link {
+    color: #0284c7;
+}
+
+.auth-toggle-link:hover {
+    text-decoration: underline;
+    opacity: 0.9;
 }
 
 /* ================= 📱 COMPREHENSIVE RESPONSIVE DESIGN ================= */
@@ -3211,8 +3616,69 @@ body.light .auth-card {
         font-size: 12px;
     }
     .auth-card {
-        padding: clamp(18px, 5vw, 28px) !important;
+        padding: 24px 18px 20px !important;
+        border-radius: 18px !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+    }
+    .auth-title {
+        font-size: 21px !important;
+    }
+    .auth-subtitle {
+        font-size: 13px !important;
+    }
+    .auth-card input {
+        font-size: 16px !important;
+        height: 46px !important;
+    }
+    .auth-submit-btn {
+        height: 48px !important;
+        font-size: 15px !important;
+        touch-action: manipulation;
+    }
+    .auth-tabs {
+        margin-bottom: 16px !important;
+    }
+    .auth-tab {
+        padding: 9px 10px !important;
+        font-size: 13px !important;
+        touch-action: manipulation;
+    }
+}
+
+/* Ultra-Compact Screens (max-width: 360px - e.g. iPhone SE 1st gen, small Galaxy devices) */
+@media (max-width: 360px) {
+    .auth-card {
+        padding: 18px 14px 16px !important;
         border-radius: 16px !important;
+    }
+    .auth-title {
+        font-size: 19px !important;
+    }
+    .auth-subtitle {
+        font-size: 12px !important;
+    }
+    .auth-brand-badge {
+        width: 42px !important;
+        height: 42px !important;
+        margin-bottom: 8px !important;
+    }
+    .auth-brand-badge svg {
+        width: 22px !important;
+        height: 22px !important;
+    }
+    .auth-card input {
+        padding-left: 36px !important;
+        font-size: 16px !important;
+    }
+    .auth-input-icon {
+        left: 10px !important;
+        width: 16px !important;
+        height: 16px !important;
+    }
+    .auth-submit-btn {
+        height: 46px !important;
+        font-size: 14px !important;
     }
 }
 </style>
@@ -3311,22 +3777,77 @@ Object.defineProperty(window, '_LOGICAL_AI_CREATOR', {
     </div>
 </div>
 
-<div id="authOverlay" class="auth-overlay">
-    <div class="auth-card">
-        <h2 class="logo-text" style="font-size: 32px; margin-bottom: 10px; justify-content: center;">Logical AI</h2>
-        <p id="authSubtitle" style="color: var(--muted); margin-bottom: 30px; font-weight: 500;">Sign in to continue</p>
+<div id="authOverlay" class="auth-overlay" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <div class="auth-card" id="authCard">
+        <div class="auth-header">
+            <div class="auth-brand-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="url(#authLogoGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <defs>
+                        <linearGradient id="authLogoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="var(--g1)" />
+                            <stop offset="100%" stop-color="var(--g3)" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                </svg>
+            </div>
+            <h2 id="authTitle" class="auth-title">Welcome back</h2>
+            <p id="authSubtitle" class="auth-subtitle">Sign in to continue to Logical AI</p>
+        </div>
 
-        <input type="email" id="authEmail" placeholder="Email Address" style="width: 100%; padding: 14px; margin-bottom: 15px; border-radius: 12px; border: 1px solid var(--border); background: var(--input); color: var(--text); outline: none; transition: 0.3s;">
-        <input type="password" id="authPassword" placeholder="Password" style="width: 100%; padding: 14px; margin-bottom: 25px; border-radius: 12px; border: 1px solid var(--border); background: var(--input); color: var(--text); outline: none; transition: 0.3s;">
+        <div class="auth-tabs" role="tablist" aria-label="Authentication mode">
+            <button type="button" class="auth-tab active" id="authTabLogin" role="tab" aria-selected="true">Sign In</button>
+            <button type="button" class="auth-tab" id="authTabRegister" role="tab" aria-selected="false">Create Account</button>
+        </div>
 
-        <button id="authSubmitBtn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, var(--g1), var(--g2)); border: none; border-radius: 12px; color: #ffffff; font-weight: 700; cursor: pointer; margin-bottom: 15px; font-size: 15px; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);">Login</button>
+        <form id="authForm" onsubmit="event.preventDefault(); return false;">
+            <div class="auth-form-group">
+                <label class="auth-label" for="authEmail">Email Address</label>
+                <div class="auth-input-container">
+                    <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    <input type="email" id="authEmail" name="email" placeholder="name@example.com" autocomplete="email" required>
+                </div>
+            </div>
 
-        <p style="color: var(--muted); font-size: 13px;">
+            <div class="auth-form-group">
+                <label class="auth-label" for="authPassword">Password</label>
+                <div class="auth-input-container has-toggle">
+                    <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    <input type="password" id="authPassword" name="password" placeholder="••••••••" autocomplete="current-password" required>
+                    <button type="button" id="authPasswordToggle" class="auth-pw-toggle-btn" aria-label="Show password" title="Show password">
+                        <svg id="authEyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div id="authMessage" class="auth-alert" role="alert">
+                <svg class="auth-alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <span id="authMessageText"></span>
+            </div>
+
+            <button type="submit" id="authSubmitBtn" class="auth-submit-btn">
+                <span class="auth-spinner" aria-hidden="true"></span>
+                <span class="auth-btn-text" id="authSubmitBtnText">Sign In</span>
+            </button>
+        </form>
+
+        <p class="auth-footer">
             <span id="authToggleText">Don't have an account?</span>
-            <span id="authToggleBtn" style="color: var(--g1); cursor: pointer; font-weight: 700; margin-left: 5px;">Register here</span>
+            <button type="button" id="authToggleBtn" class="auth-toggle-link">Register here</button>
         </p>
-
-        <p id="authMessage" style="color: #f5576c; margin-top: 15px; font-size: 13px; font-weight: 600; display: none; padding: 10px; background: rgba(245, 87, 108, 0.1); border-radius: 8px; border: 1px solid rgba(245, 87, 108, 0.3);"></p>
     </div>
 </div>
 
@@ -3618,45 +4139,122 @@ const API_BASE_URL = (window.location.protocol.startsWith('http') && window.loca
 
 // ================= AUTHENTICATION LOGIC =================
 const authOverlay = document.getElementById('authOverlay');
+const authCard = document.getElementById('authCard');
+const authTitle = document.getElementById('authTitle');
+const authSubtitle = document.getElementById('authSubtitle');
+const authTabLogin = document.getElementById('authTabLogin');
+const authTabRegister = document.getElementById('authTabRegister');
+const authForm = document.getElementById('authForm');
 const authEmail = document.getElementById('authEmail');
 const authPassword = document.getElementById('authPassword');
+const authPasswordToggle = document.getElementById('authPasswordToggle');
+const authEyeIcon = document.getElementById('authEyeIcon');
 const authSubmitBtn = document.getElementById('authSubmitBtn');
+const authSubmitBtnText = document.getElementById('authSubmitBtnText');
 const authToggleBtn = document.getElementById('authToggleBtn');
 const authToggleText = document.getElementById('authToggleText');
-const authSubtitle = document.getElementById('authSubtitle');
 const authMessage = document.getElementById('authMessage');
+const authMessageText = document.getElementById('authMessageText');
 
 let isLoginMode = true;
+
+function setAuthMode(loginMode) {
+    isLoginMode = loginMode;
+    if (authTitle) authTitle.innerText = isLoginMode ? "Welcome back" : "Create your account";
+    if (authSubtitle) authSubtitle.innerText = isLoginMode ? "Sign in to continue to Logical AI" : "Join Logical AI to start exploring";
+    if (authSubmitBtnText) authSubmitBtnText.innerText = isLoginMode ? "Sign In" : "Create Account";
+    else if (authSubmitBtn) authSubmitBtn.innerText = isLoginMode ? "Sign In" : "Create Account";
+    if (authToggleText) authToggleText.innerText = isLoginMode ? "Don't have an account?" : "Already have an account?";
+    if (authToggleBtn) authToggleBtn.innerText = isLoginMode ? "Register here" : "Login here";
+    
+    if (authTabLogin) {
+        authTabLogin.classList.toggle('active', isLoginMode);
+        authTabLogin.setAttribute('aria-selected', isLoginMode ? "true" : "false");
+    }
+    if (authTabRegister) {
+        authTabRegister.classList.toggle('active', !isLoginMode);
+        authTabRegister.setAttribute('aria-selected', !isLoginMode ? "true" : "false");
+    }
+    if (authPassword) {
+        authPassword.autocomplete = isLoginMode ? "current-password" : "new-password";
+    }
+    hideAuthError();
+}
+
+if (authTabLogin) authTabLogin.onclick = () => setAuthMode(true);
+if (authTabRegister) authTabRegister.onclick = () => setAuthMode(false);
+if (authToggleBtn) authToggleBtn.onclick = () => setAuthMode(!isLoginMode);
+
+// Password visibility toggle
+if (authPasswordToggle && authPassword) {
+    authPasswordToggle.onclick = () => {
+        const isPassword = authPassword.type === "password";
+        authPassword.type = isPassword ? "text" : "password";
+        authPasswordToggle.setAttribute('aria-label', isPassword ? "Hide password" : "Show password");
+        authPasswordToggle.setAttribute('title', isPassword ? "Hide password" : "Show password");
+        if (authEyeIcon) {
+            authEyeIcon.innerHTML = isPassword
+                ? `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>`
+                : `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
+        }
+    };
+}
+
+function showAuthError(msg) {
+    if (!authMessage) return;
+    if (authMessageText) authMessageText.innerText = msg;
+    else authMessage.innerText = msg;
+    authMessage.style.display = 'flex';
+    if (authCard) {
+        authCard.classList.remove('shake');
+        void authCard.offsetWidth; // trigger reflow for smooth re-animation
+        authCard.classList.add('shake');
+    }
+}
+
+function hideAuthError() {
+    if (authMessage) authMessage.style.display = 'none';
+}
+
+if (authEmail) authEmail.oninput = hideAuthError;
+if (authPassword) authPassword.oninput = hideAuthError;
 
 function checkAuth() {
     if (localStorage.getItem('logical_ai_token')) {
         authOverlay.style.display = 'none';
     } else {
         authOverlay.style.display = 'flex';
+        setAuthMode(true);
     }
 }
 checkAuth();
 
-authToggleBtn.onclick = () => {
-    isLoginMode = !isLoginMode;
-    authSubmitBtn.innerText = isLoginMode ? "Login" : "Create Account";
-    authSubtitle.innerText = isLoginMode ? "Sign in to continue" : "Join Logical AI today";
-    authToggleText.innerText = isLoginMode ? "Don't have an account?" : "Already have an account?";
-    authToggleBtn.innerText = isLoginMode ? "Register here" : "Login here";
-    authMessage.style.display = 'none';
-};
-
-authSubmitBtn.onclick = async () => {
-    const email = authEmail.value.trim();
-    const password = authPassword.value.trim();
+async function handleAuthSubmit() {
+    const email = authEmail ? authEmail.value.trim() : "";
+    const password = authPassword ? authPassword.value.trim() : "";
 
     if (!email || !password) {
-        authMessage.innerText = "Please fill in all fields.";
-        authMessage.style.display = 'block';
+        showAuthError("Please fill in both email and password.");
         return;
     }
 
-    authSubmitBtn.innerText = "Processing...";
+    if (!email.includes('@') || !email.includes('.')) {
+        showAuthError("Please enter a valid email address.");
+        return;
+    }
+
+    if (password.length < 6) {
+        showAuthError("Password must be at least 6 characters.");
+        return;
+    }
+
+    hideAuthError();
+    if (authSubmitBtn) {
+        authSubmitBtn.disabled = true;
+        authSubmitBtn.classList.add('loading');
+    }
+    if (authSubmitBtnText) authSubmitBtnText.innerText = isLoginMode ? "Signing in..." : "Creating account...";
+
     const endpoint = isLoginMode ? "login" : "register";
 
     try {
@@ -3673,19 +4271,25 @@ authSubmitBtn.onclick = async () => {
             localStorage.setItem('logical_ai_email', email);
             if (typeof updateSettingsUserInfo === 'function') updateSettingsUserInfo();
             authOverlay.style.display = 'none';
-            authEmail.value = '';
-            authPassword.value = '';
+            if (authEmail) authEmail.value = '';
+            if (authPassword) authPassword.value = '';
+            hideAuthError();
         } else {
-            authMessage.innerText = data.detail || data.error || "Authentication failed.";
-            authMessage.style.display = 'block';
+            showAuthError(data.detail || data.error || (isLoginMode ? "Invalid email or password." : "Registration failed. Please try again."));
         }
     } catch (error) {
-        authMessage.innerText = "Server connection error. Is backend running?";
-        authMessage.style.display = 'block';
+        showAuthError("Unable to connect to server. Please verify your connection.");
     } finally {
-        authSubmitBtn.innerText = isLoginMode ? "Login" : "Create Account";
+        if (authSubmitBtn) {
+            authSubmitBtn.disabled = false;
+            authSubmitBtn.classList.remove('loading');
+        }
+        if (authSubmitBtnText) authSubmitBtnText.innerText = isLoginMode ? "Sign In" : "Create Account";
     }
-};
+}
+
+if (authSubmitBtn) authSubmitBtn.onclick = handleAuthSubmit;
+if (authForm) authForm.onsubmit = (e) => { e.preventDefault(); handleAuthSubmit(); };
 
 // Logout Function
 document.getElementById('logoutBtn').onclick = () => {
@@ -3695,13 +4299,30 @@ document.getElementById('logoutBtn').onclick = () => {
     }
 };
 
-window.onload = () => {
+let isInitialStartup = true;
+
+window.addEventListener('DOMContentLoaded', () => {
     const msgBox = document.getElementById("msg");
-    if(msgBox) { 
+    if (msgBox) { 
         msgBox.value = ""; 
         msgBox.style.height = "auto"; 
     }
-};
+    const searchBox = document.getElementById("chatSearch");
+    if (searchBox) {
+        searchBox.value = "";
+    }
+    if (window.location.hash || window.location.search) {
+        try {
+            window.history.replaceState(null, '', window.location.pathname);
+        } catch(e) {}
+    }
+});
+
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        isInitialStartup = false;
+    }, 200);
+});
 
 function getFormattedTime() {
     return new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
@@ -3724,25 +4345,29 @@ const SVG_DOTS = `<svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="
 const SVG_SHARE = `<svg class="icon-svg" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
 const SVG_PIN = `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.16 7.33l-5.49-5.49A1.9 1.9 0 0 0 14.33 1.25L10 5.58l3.16 3.16-7.85 7.85-3.88-1.07-1.12 1.11 4.9 4.9 1.11-1.11-1.07-3.89 7.86-7.85 3.16 3.16 4.33-4.33a1.9 1.9 0 0 0 .56-1.34z"/></svg>`;
 
-/* 🌟 DYNAMIC SUGGESTION POOL 🌟 */
+/* 🌟 CURATED STABLE PROMPT SUGGESTIONS 🌟 */
 const promptPool = [
-    { title: "Flowchart to C++", desc: "Upload diagram, get code", icon: SVG_IMG, prompt: "I am uploading a flowchart/diagram. Please analyze its logic and write a complete C++ program for it." },
-    { title: "Code a Web App", desc: "Live Artifact UI", icon: SVG_CODE, prompt: "Write a complete, highly optimized web application with HTML, CSS, and JS in a single file. Make it visually stunning." },
-    { title: "Smart PDF Chat", desc: "Ask questions from doc", icon: SVG_DOC, prompt: "Extract the most important data from this document and provide citations [Source: Page X] for each fact." },
-    { title: "Master Strategy", desc: "Plan an unassailable strategy", icon: SVG_PLAN, prompt: "Create a flawless, step-by-step master strategy for my new college project." },
+    { title: "Code a Web App", desc: "Live Artifact UI preview", icon: SVG_CODE, prompt: "Write a complete, highly optimized web application with HTML, CSS, and JS in a single file. Make it visually stunning." },
+    { title: "Flowchart to C++", desc: "Analyze diagram, get code", icon: SVG_IMG, prompt: "I am uploading a flowchart/diagram. Please analyze its logic and write a complete C++ program for it." },
+    { title: "Smart Document Chat", desc: "Extract facts with citations", icon: SVG_DOC, prompt: "Extract the most important data from this document and provide citations [Source: Page X] for each fact." },
+    { title: "Master Strategy", desc: "Plan a step-by-step roadmap", icon: SVG_PLAN, prompt: "Create a flawless, step-by-step master strategy for my new project." },
     { title: "Fix My Code", desc: "Paste code to debug", icon: SVG_CODE, prompt: "I have a bug in my code. Can you analyze it, explain the error, and provide the corrected version?" },
-    { title: "Explain like I'm 5", desc: "Simplify complex topics", icon: SVG_BOOK, prompt: "Explain quantum computing (or any complex topic) in very simple terms, as if I were 5 years old." },
-    { title: "Mock Interview", desc: "Practice for placements", icon: SVG_PLAY, prompt: "Act as a strict technical interviewer. Ask me a difficult Data Structures question and evaluate my answer." },
-    { title: "Write a Python Script", desc: "Automate a task", icon: SVG_CODE, prompt: "Write a Python script to automate a repetitive task, like organizing files in a directory based on their extension." },
-    { title: "Data Analysis", desc: "Extract logic from data", icon: SVG_IMG, prompt: "Analyze the provided data and summarize the key trends, patterns, and insights in bullet points." },
-    { title: "Math & Science", desc: "Solve complex equations", icon: SVG_BOOK, prompt: "Act as an expert math tutor. Explain calculus integration step-by-step using formulas." }
+    { title: "Explain Complex Topic", desc: "Intuitive simple terms", icon: SVG_BOOK, prompt: "Explain quantum computing in very simple terms, as if I were 5 years old." }
 ];
 
-/* ================= INDEXED DB (UNLIMITED STORAGE) ================= */
+/* ================= INDEXED DB (STORAGE & HYDRATION) ================= */
 const dbName = "LogicalAIOmniverseDB";
 let db;
 let chats = [];
-let currentChatId=null;
+let currentChatId = null;
+
+function getChatTimestamp(c) {
+    if (!c) return 0;
+    if (typeof c.updatedAt === 'number') return c.updatedAt;
+    if (typeof c.createdAt === 'number') return c.createdAt;
+    const match = String(c.id).match(/\d+/);
+    return match ? parseInt(match[0], 10) : 0;
+}
 
 function initDB() {
     return new Promise((resolve, reject) => {
@@ -3762,7 +4387,10 @@ async function saveChats() {
     if (!db) return;
     const tx = db.transaction("chats", "readwrite");
     const store = tx.objectStore("chats");
-    for (let chat of chats) { store.put(chat); }
+    for (let chat of chats) { 
+        if (!chat.updatedAt) chat.updatedAt = getChatTimestamp(chat);
+        store.put(chat); 
+    }
 }
 
 async function loadChatsFromDB() {
@@ -3772,20 +4400,40 @@ async function loadChatsFromDB() {
         const store = tx.objectStore("chats");
         const request = store.getAll();
         request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => resolve([]);
     });
 }
 
-// Startup execution
+// Startup execution with persistent active session restoration (No random search)
 (async function startup() {
-    await initDB();
-    chats = await loadChatsFromDB();
-    chats = chats.filter(c => c.messages && c.messages.length > 0);
-    
-    if(chats.length === 0) createNewChat(); 
-    else { 
-        currentChatId = chats[0].id; 
-        renderHistory(); 
-        renderChat(); 
+    try {
+        await initDB();
+        const loadedChats = await loadChatsFromDB();
+        
+        // Remove corrupted items if any
+        chats = (loadedChats || []).filter(c => c && c.id);
+        
+        // Always sort chats descending by timestamp (newest first)
+        chats.sort((a, b) => getChatTimestamp(b) - getChatTimestamp(a));
+        
+        const lastActiveId = localStorage.getItem('logical_ai_last_active_chat');
+        let activeChat = lastActiveId ? chats.find(c => c.id === lastActiveId) : null;
+        
+        if (!activeChat && chats.length > 0) {
+            activeChat = chats[0];
+        }
+        
+        if (activeChat) {
+            currentChatId = activeChat.id;
+            localStorage.setItem('logical_ai_last_active_chat', currentChatId);
+            renderHistory();
+            renderChat();
+        } else {
+            createNewChat();
+        }
+    } catch (e) {
+        console.error("Startup error:", e);
+        createNewChat();
     }
 })();
 
@@ -4109,7 +4757,7 @@ window.runSandboxCode = async function() {
 window.autoFixCode = function(lang) {
     closePreview();
     const prompt = `I ran the ${lang} code but encountered this error in the terminal:\n\n\`\`\`text\n${window.lastExecutionError}\n\`\`\`\n\nPlease fix the bug in the code below and provide the complete corrected version:\n\n\`\`\`${lang}\n${window.lastExecutionCode}\n\`\`\``;
-    usePrompt(prompt);
+    usePrompt(prompt, true);
 };
 
 window.closePreview = function() {
@@ -4194,7 +4842,7 @@ missionModeBtn.onclick = () => {
         : `<svg class="icon-svg" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> <span>Mission Mode</span>`;
     
     if (isMissionMode) {
-        usePrompt("Initialize Mission Mode. Give me a strict roadmap for today's goal and do not answer off-topic questions.");
+        usePrompt("Initialize Mission Mode. Give me a strict roadmap for today's goal and do not answer off-topic questions.", true);
     }
 };
 
@@ -4582,7 +5230,15 @@ window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', e 
 
 msg.oninput=()=>{ msg.style.height="auto"; msg.style.height=Math.min(msg.scrollHeight,220)+"px"; };
 
-window.usePrompt = function(text) { msg.value = text; msg.oninput(); handleSendClick(); };
+window.usePrompt = function(text, autoSend = false) { 
+    if (!text || isInitialStartup) return;
+    msg.value = text; 
+    msg.oninput(); 
+    msg.focus(); 
+    if (autoSend) {
+        handleSendClick(); 
+    }
+};
 
 /* ================= CHAT RENDER LOGIC ================= */
 function addUser(text, imgB64 = null, docInfo = null){ 
@@ -4680,13 +5336,13 @@ function setAnswer(box, text, isDone = false){
 }
 
 function renderWelcomeScreen() {
-  const shuffled = promptPool.sort(() => 0.5 - Math.random()).slice(0, 4);
+  const topPrompts = promptPool.slice(0, 4);
   const hour = new Date().getHours();
   let greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   let subGreeting = hour < 12 ? "What would you like to build or solve today?" : hour < 18 ? "Ready to tackle some complex logic?" : "Hope you had a productive day. How can I assist?";
 
-  let cardsHtml = shuffled.map(p => `
-    <div class="sugg-card" onclick="usePrompt('${p.prompt.replace(/'/g, "\\'")}')">
+  let cardsHtml = topPrompts.map(p => `
+    <div class="sugg-card" onclick="usePrompt('${p.prompt.replace(/'/g, "\\'")}')" role="button" tabindex="0" aria-label="Use prompt: ${p.title}">
       <div class="sugg-icon">${p.icon}</div>
       <div class="sugg-card-body">
         <div class="sugg-title">${p.title}</div>
@@ -4737,15 +5393,30 @@ function makeTitleFromText(text){ return (!text || text.trim() === "") ? "Voice 
 function createNewChat(){
   if('speechSynthesis' in window) window.speechSynthesis.cancel(); 
   if(currentAbortController) currentAbortController.abort();
-  const id="chat_"+Date.now(); chats.unshift({ id:id, title: "New Session", pinned: false, messages:[] });
-  currentChatId=id; saveChats(); renderHistory(); renderChat(); setTimeout(() => msg.focus(), 100);
+  const now = Date.now();
+  const id = "chat_" + now;
+  chats.unshift({ id: id, title: "New Session", pinned: false, messages: [], createdAt: now, updatedAt: now });
+  currentChatId = id; 
+  localStorage.setItem('logical_ai_last_active_chat', currentChatId);
+  saveChats(); 
+  renderHistory(); 
+  renderChat(); 
+  setTimeout(() => {
+      if (!isInitialStartup && msg && document.activeElement !== authEmail && document.activeElement !== authPassword) {
+          msg.focus();
+      }
+  }, 100);
 }
 
 function getCurrentChat(){ return chats.find(c=>c.id===currentChatId); }
 
 function deleteChat(chatId){
-  chats=chats.filter(c=>c.id!==chatId);
-  if(currentChatId===chatId){ currentChatId = chats.length>0 ? chats[0].id : null; }
+  chats = chats.filter(c => c.id !== chatId);
+  if (currentChatId === chatId){ 
+      currentChatId = chats.length > 0 ? chats[0].id : null; 
+      if (currentChatId) localStorage.setItem('logical_ai_last_active_chat', currentChatId);
+      else localStorage.removeItem('logical_ai_last_active_chat');
+  }
   
   // Since IndexedDB needs explicit delete, we also trigger it here to stay clean
   if (db) {
@@ -4753,7 +5424,9 @@ function deleteChat(chatId){
       tx.objectStore("chats").delete(chatId);
   }
   
-  if(!currentChatId){ createNewChat(); return; } renderHistory(); renderChat();
+  if (!currentChatId){ createNewChat(); return; } 
+  renderHistory(); 
+  renderChat();
 }
 
 window.shareChat = function(chatObj) {
@@ -4830,7 +5503,14 @@ function renderHistory(filter = ""){
     actionsWrap.appendChild(dotsBtn);
     actionsWrap.appendChild(dropdown);
 
-    div.onclick=()=>{ currentChatId=c.id; renderHistory(); renderChat(); if(window.innerWidth <= 768) { closeSidebar(); } if('speechSynthesis' in window) window.speechSynthesis.cancel(); };
+    div.onclick=()=>{ 
+        currentChatId = c.id; 
+        localStorage.setItem('logical_ai_last_active_chat', currentChatId);
+        renderHistory(); 
+        renderChat(); 
+        if (window.innerWidth <= 768) { closeSidebar(); } 
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel(); 
+    };
     
     div.appendChild(titleWrap); 
     div.appendChild(actionsWrap);
@@ -4866,7 +5546,10 @@ clearChatsBtn.onclick=()=>{
             tx.objectStore("chats").clear();
         }
         
-        chats=[]; currentChatId=null; createNewChat(); 
+        chats=[]; 
+        currentChatId=null; 
+        localStorage.removeItem('logical_ai_last_active_chat');
+        createNewChat(); 
     } 
 };
 
@@ -4893,6 +5576,10 @@ function detectMood(text) {
 }
 
 async function sendMsg(){
+  if (isInitialStartup) {
+      console.warn("Blocked sendMsg: initial startup hydration is in progress.");
+      return;
+  }
   let text = msg.value.trim();
   if((!text && !currentBase64Image && !currentDocument) || isLoading) return;
 
@@ -4933,6 +5620,7 @@ async function sendMsg(){
   
   let aiMessageObj = { role: "ai", text: "" }; 
   c.messages.push(aiMessageObj);
+  c.updatedAt = Date.now();
   saveChats(); 
   renderHistory();
 
