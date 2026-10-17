@@ -1,0 +1,29 @@
+{
+  "name": "logical-ai",
+  "version": "1.0.0",
+  "description": "Logical AI - Intelligent AI Assistant by Shreyash Singh",
+  "main": "index.html",
+  "scripts": {
+    "build": "vite build",
+    "dev": "concurrently --kill-others -n \"BACKEND,FRONTEND\" -c \"blue,green\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "start": "npm run dev",
+    "dev:backend": "node start-server.js",
+    "dev:frontend": "vite --port 5173 --host 0.0.0.0",
+    "server": "node start-server.js",
+    "frontend": "vite --port 5173 --host 0.0.0.0",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "ai",
+    "logical-ai",
+    "fastapi",
+    "vite"
+  ],
+  "author": "Shreyash Singh",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "concurrently": "^10.0.6",
+    "vite": "^8.3.4"
+  }
+}
