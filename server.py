@@ -217,22 +217,42 @@ class MacroRequest(BaseModel):
 # ==========================================
 # 5. RAG & CORE ENGINE HELPER FUNCTIONS
 # ==========================================
+def is_explicit_greeting(prompt: str) -> bool:
+    if not prompt:
+        return False
+    clean = re.sub(r'[^\w\s]', '', prompt.lower()).strip()
+    words = clean.split()
+    if not words:
+        return False
+    greeting_words = {"hi", "hello", "hey", "greetings", "namaste", "hola", "sup", "yo"}
+    greeting_phrases = ["good morning", "good afternoon", "good evening", "good day"]
+    if words[0] in greeting_words and len(words) <= 4:
+        return True
+    return any(clean.startswith(phrase) for phrase in greeting_phrases)
+
 def get_greeting(username: str) -> str:
     hour = datetime.now().hour
-    gr = ["Logical AI initialized.", "System ready.", "At your service, built by Shreyash."]
     time_msg = "Good Morning" if hour < 12 else "Good Afternoon" if hour < 17 else "Good Evening"
-    return f"{time_msg}, {username}. {random.choice(gr)} How can I assist you today?"
+    return f"{time_msg}, {username}. How can I assist you today?"
 
 def needs_web_search(prompt: str) -> bool:
-    triggers = ["news", "today", "who is", "weather", "latest", "aaj ka", "score", "price", "current"]
-    return any(t in prompt.lower() for t in triggers)
+    if not prompt:
+        return False
+    p = prompt.lower().strip()
+    explicit_triggers = [
+        "search web", "web search", "browse web", 
+        "latest news", "today's news", "aaj ka news", 
+        "current weather in", "weather in", "weather today",
+        "live score", "stock price of", "current price of"
+    ]
+    return any(t in p for t in explicit_triggers)
 
 async def fetch_web_data(query: str) -> str:
     if not AsyncDDGS:
         return ""
     try:
         print(f"🔍 [WEB SEARCH]: Fetching live data for -> '{query}'")
-        results = await asyncio.wait_for(AsyncDDGS().text(query, max_results=2), timeout=2.5)
+        results = await asyncio.wait_for(AsyncDDGS().text(query, max_results=2), timeout=1.5)
         if results:
             context = "\n\n=== 🌐 LIVE WEB INTELLIGENCE ===\n(Use this factual data to answer the user's prompt accurately)\n"
             for res in results:
@@ -344,8 +364,16 @@ You MUST detect the user's language and mirror it flawlessly.
 
     user_input = chat_history[-1]["content"] if chat_history else ""
 
-    if len(chat_history) == 1 and not persona_prompt and not request.document:
-        system_identity += f"\n\n[DIRECTIVE]: Since this is the first message of the conversation, naturally start your response with exactly: '{get_greeting(username)}'"
+    is_first_turn = len(chat_history) <= 1
+    user_greeted = is_explicit_greeting(user_input)
+
+    if is_first_turn:
+        if user_greeted:
+            system_identity += f"\n\n[GREETING PROTOCOL]: The user greeted you ('{user_input}'). Greet {username} back warmly and naturally once using the current time of day ({current_time}), then ask how you can assist them today."
+        else:
+            system_identity += f"\n\n[CONVERSATION PROTOCOL]: The user asked a direct question or gave a task. Answer directly, concisely, and helpfully. Do NOT prefix your answer with 'Good Morning', 'Hello', 'Logical AI initialized', or repetitive generic pleasantries."
+    else:
+        system_identity += f"\n\n[CRITICAL CONVERSATION PROTOCOL]: This conversation is ongoing (turn {len(chat_history)}). Do NOT repeat greetings like 'Good morning', 'Good afternoon', 'Good evening', 'Hello', or 'Hi'. Answer the user's latest query directly without repetitive pleasantry openers."
 
     if request.document:
         doc_text = extract_text_from_document(request.document)

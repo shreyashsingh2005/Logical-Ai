@@ -1,15 +1,30 @@
 import os
 import json
 import httpx
+import time
 from typing import List, Dict, Optional, AsyncGenerator
 from dotenv import load_dotenv
 
 # Load environment variables from .env
 load_dotenv()
 
+_last_env_check = 0.0
+_cached_mtime = 0.0
+
 def get_ai_config() -> dict:
-    # Hot-reload .env if edited while server is running
-    load_dotenv(override=True)
+    global _last_env_check, _cached_mtime
+    now = time.time()
+    if now - _last_env_check > 2.0:
+        _last_env_check = now
+        env_file = os.path.join(os.path.dirname(__file__), ".env")
+        if os.path.exists(env_file):
+            try:
+                mtime = os.path.getmtime(env_file)
+                if mtime != _cached_mtime:
+                    load_dotenv(env_file, override=True)
+                    _cached_mtime = mtime
+            except Exception:
+                pass
     gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
     api_key = os.getenv("AI_API_KEY", "").strip() or gemini_key
     default_provider = "gemini" if (gemini_key or "AI_API_KEY" in os.environ) else "openai"
