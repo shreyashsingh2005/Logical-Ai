@@ -178,10 +178,28 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Logical AI - by Shreyash Singh", lifespan=lifespan)
 
+# CORS: allow credentials (needed for JWT bearer auth) without using the
+# invalid "*" origin wildcard (browsers reject Access-Control-Allow-Origin: *
+# together with Access-Control-Allow-Credentials: true). Accept localhost for
+# local dev plus Vercel/production origins via an env override.
+_env_origins = [o.strip() for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()]
+if _env_origins:
+    # Explicit origins from config (plain origins, no regex)
+    _cors_allow_origins = _env_origins
+    _cors_allow_origin_regex = None
+else:
+    # Default: localhost (dev) + Vercel (production) matched via regex
+    _cors_allow_origins = []
+    _cors_allow_origin_regex = (
+        r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$|"
+        r"^https://[a-z0-9.-]+\.vercel\.app$|"
+        r"^https://[a-z0-9.-]+\.vercel\.build$"
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$",
-    allow_origins=["*"], 
+    allow_origin_regex=_cors_allow_origin_regex,
+    allow_origins=_cors_allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

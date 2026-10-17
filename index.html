@@ -158,20 +158,16 @@ input:focus-visible, textarea:focus-visible {
 }
 
 /* SOLID CALM SURFACE */
-html, body { 
+html, body {
     background: var(--bg-1);
-    color: var(--text); 
-    position: fixed;
-    top: 0;
-    left: 0;
+    color: var(--text);
     width: 100%;
     height: 100%;
-    overflow: hidden; 
+    overflow: hidden;
     overscroll-behavior: none;
-    -webkit-overflow-scrolling: touch;
-    transition: background 0.3s ease, color 0.3s ease; 
-    -webkit-font-smoothing: antialiased; 
+    -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background 0.3s ease, color 0.3s ease;
 }
 
 ::selection { 
@@ -2559,7 +2555,7 @@ body.light #stdinInput::placeholder {
 }
 
 body.keyboard-open #inputContainer {
-    padding-bottom: 8px !important;
+    padding-bottom: calc(max(20px, env(safe-area-inset-bottom, 20px)) + 8px) !important;
 }
 
 body.keyboard-open #scrollToBottom {
@@ -4358,32 +4354,32 @@ document.getElementById('logoutBtn').onclick = () => {
 let isInitialStartup = true;
 
 function updateVisualViewport() {
+    const docEl = document.documentElement;
     if (window.visualViewport) {
         const vv = window.visualViewport;
         const height = Math.round(vv.height);
         const offsetTop = Math.round(vv.offsetTop);
         const offsetLeft = Math.round(vv.offsetLeft);
 
-        document.documentElement.style.setProperty('--app-height', `${height}px`);
-        document.documentElement.style.setProperty('--app-top', `${offsetTop}px`);
-        document.documentElement.style.setProperty('--app-left', `${offsetLeft}px`);
-        document.documentElement.style.setProperty('--vvh', `${height}px`);
+        // --app-height drives #app/#main/#chat height so the chat container
+        // shrinks when the iOS keyboard opens (works with interactive-widget=
+        // resizes-content). --app-top/--app-left are used by absolute-positioned
+        // fixed elements to stay aligned to the visual viewport.
+        docEl.style.setProperty('--app-height', `${height}px`);
+        docEl.style.setProperty('--app-top', `${offsetTop}px`);
+        docEl.style.setProperty('--app-left', `${offsetLeft}px`);
+        docEl.style.setProperty('--vvh', `${height}px`);
 
         // Detect if software keyboard is open
         const isKeyboardOpen = (window.innerHeight - height) > 150;
         document.body.classList.toggle('keyboard-open', isKeyboardOpen);
     } else {
         const height = window.innerHeight;
-        document.documentElement.style.setProperty('--app-height', `${height}px`);
-        document.documentElement.style.setProperty('--app-top', '0px');
-        document.documentElement.style.setProperty('--app-left', '0px');
-        document.documentElement.style.setProperty('--vvh', `${height}px`);
+        docEl.style.setProperty('--app-height', `${height}px`);
+        docEl.style.setProperty('--app-top', '0px');
+        docEl.style.setProperty('--app-left', '0px');
+        docEl.style.setProperty('--vvh', `${height}px`);
         document.body.classList.remove('keyboard-open');
-    }
-
-    // Keep page window scroll locked at (0, 0)
-    if (window.scrollY !== 0 || window.scrollX !== 0) {
-        window.scrollTo(0, 0);
     }
 
     // Monaco editor resize handling if modal is visible
@@ -4403,7 +4399,6 @@ function updateVisualViewport() {
 
 if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', updateVisualViewport);
-    window.visualViewport.addEventListener('scroll', updateVisualViewport);
 }
 window.addEventListener('resize', updateVisualViewport);
 window.addEventListener('orientationchange', () => {
@@ -4423,9 +4418,9 @@ window.addEventListener('DOMContentLoaded', () => {
         if (sbb) sbb.classList.remove("active");
     }
     const msgBox = document.getElementById("msg");
-    if (msgBox) { 
-        msgBox.value = ""; 
-        msgBox.style.height = "auto"; 
+    if (msgBox) {
+        msgBox.value = "";
+        msgBox.style.height = "auto";
     }
     const searchBox = document.getElementById("chatSearch");
     if (searchBox) {
@@ -5370,23 +5365,15 @@ msg.oninput = () => {
 };
 
 msg.addEventListener('focus', () => {
-    window.scrollTo(0, 0);
     updateVisualViewport();
     setTimeout(() => {
-        window.scrollTo(0, 0);
         updateVisualViewport();
         scrollForce(false);
-    }, 100);
-    setTimeout(() => {
-        window.scrollTo(0, 0);
-        updateVisualViewport();
-        scrollForce(false);
-    }, 320);
+    }, 300);
 });
 
 msg.addEventListener('blur', () => {
     setTimeout(() => {
-        window.scrollTo(0, 0);
         updateVisualViewport();
         scrollForce(false);
     }, 100);
@@ -5499,9 +5486,8 @@ function setAnswer(box, text, isDone = false){
 
 function renderWelcomeScreen() {
   const topPrompts = promptPool.slice(0, 4);
-  const hour = new Date().getHours();
-  let greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  let subGreeting = hour < 12 ? "What would you like to build or solve today?" : hour < 18 ? "Ready to tackle some complex logic?" : "Hope you had a productive day. How can I assist?";
+  const greeting = "Hello";
+  const subGreeting = "How can I help you today?";
 
   let cardsHtml = topPrompts.map(p => `
     <div class="sugg-card" onclick="usePrompt('${p.prompt.replace(/'/g, "\\'")}')" role="button" tabindex="0" aria-label="Use prompt: ${p.title}">
@@ -5612,7 +5598,7 @@ function renderHistory(filter = ""){
   let sortedChats = [...chats].sort((a, b) => {
       if(a.pinned && !b.pinned) return -1;
       if(!a.pinned && b.pinned) return 1;
-      return 0;
+      return getChatTimestamp(b) - getChatTimestamp(a);
   });
 
   let matchCount = 0;
@@ -5716,7 +5702,18 @@ clearChatsBtn.onclick=()=>{
     } 
 };
 
-function handleSendClick() { if (isLoading) { if (currentAbortController) currentAbortController.abort(); } else { sendMsg(); } }
+function handleSendClick() {
+    if (isInitialStartup) {
+        console.warn("Blocked send: initial startup hydration in progress.");
+        return;
+    }
+    if (isLoading) {
+        // Already generating — stop the active stream instead of starting a duplicate
+        if (currentAbortController) currentAbortController.abort();
+        return;
+    }
+    sendMsg();
+}
 send.onclick = handleSendClick;
 
 msg.onkeydown = e => { 
