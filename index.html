@@ -3067,14 +3067,6 @@ Object.defineProperty(window, '_LOGICAL_AI_CREATOR', {
             <span id="authToggleBtn" style="color: var(--g1); cursor: pointer; font-weight: 700; margin-left: 5px;">Register here</span>
         </p>
 
-        <div style="display: flex; align-items: center; gap: 10px; margin: 16px 0 12px 0;">
-            <div style="flex: 1; height: 1px; background: var(--border);"></div>
-            <span style="font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); font-weight: 600;">or</span>
-            <div style="flex: 1; height: 1px; background: var(--border);"></div>
-        </div>
-
-        <button type="button" id="authGuestBtn" style="width: 100%; padding: 11px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-weight: 600; cursor: pointer; font-size: 13px; transition: all 0.15s ease;">Continue as Guest (Offline Mode)</button>
-
         <p id="authMessage" style="color: #f5576c; margin-top: 15px; font-size: 13px; font-weight: 600; display: none; padding: 10px; background: rgba(245, 87, 108, 0.1); border-radius: 8px; border: 1px solid rgba(245, 87, 108, 0.3);"></p>
     </div>
 </div>
@@ -3202,28 +3194,6 @@ Object.defineProperty(window, '_LOGICAL_AI_CREATOR', {
                 <span class="status-dot"></span>
                 <span id="settingsAiStatusText">Checking...</span>
               </div>
-            </div>
-          </div>
-
-          <div class="setting-item-row">
-            <div class="setting-info">
-              <label for="settingsCustomApiKey" class="setting-label">Gemini API Key (Direct Browser)</label>
-              <div class="setting-sublabel">Enables live AI chat on Vercel without requiring a Python backend</div>
-            </div>
-            <div class="setting-control-area">
-              <input type="password" id="settingsCustomApiKey" placeholder="Paste AIzaSy..." class="settings-select" style="min-width: 130px; width: 150px; font-family: monospace; font-size: 11.5px; padding: 7px 10px;">
-              <button id="saveApiKeyBtn" class="settings-action-btn neutral" style="padding: 7px 12px;">Save</button>
-            </div>
-          </div>
-
-          <div class="setting-item-row">
-            <div class="setting-info">
-              <label for="settingsBackendUrl" class="setting-label">Cloud Backend URL</label>
-              <div class="setting-sublabel">Render / Railway URL (e.g. https://your-backend.onrender.com)</div>
-            </div>
-            <div class="setting-control-area">
-              <input type="text" id="settingsBackendUrl" placeholder="http://localhost:8000" class="settings-select" style="min-width: 130px; width: 150px; font-family: monospace; font-size: 11.5px; padding: 7px 10px;">
-              <button id="saveBackendUrlBtn" class="settings-action-btn neutral" style="padding: 7px 12px;">Save</button>
             </div>
           </div>
 
@@ -3387,8 +3357,11 @@ function getActiveBackendUrl() {
         || ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
             ? `${window.location.protocol.startsWith('http') ? window.location.protocol : 'http:'}//${window.location.hostname}:8000`
             : window.location.origin);
-}
-let API_BASE_URL = getActiveBackendUrl();
+const API_BASE_URL = (window.location.protocol.startsWith('http') && window.location.port === "8000")
+    ? window.location.origin
+    : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? `${window.location.protocol}//${window.location.hostname}:8000`
+        : window.location.origin;
 
 // ================= AUTHENTICATION LOGIC =================
 const authOverlay = document.getElementById('authOverlay');
@@ -3399,7 +3372,6 @@ const authToggleBtn = document.getElementById('authToggleBtn');
 const authToggleText = document.getElementById('authToggleText');
 const authSubtitle = document.getElementById('authSubtitle');
 const authMessage = document.getElementById('authMessage');
-const authGuestBtn = document.getElementById('authGuestBtn');
 
 let isLoginMode = true;
 
@@ -3411,15 +3383,6 @@ function checkAuth() {
     }
 }
 checkAuth();
-
-if (authGuestBtn) {
-    authGuestBtn.onclick = () => {
-        localStorage.setItem('logical_ai_token', 'guest_session_' + Date.now());
-        localStorage.setItem('logical_ai_email', 'guest@logical.ai');
-        if (typeof updateSettingsUserInfo === 'function') updateSettingsUserInfo();
-        authOverlay.style.display = 'none';
-    };
-}
 
 authToggleBtn.onclick = () => {
     isLoginMode = !isLoginMode;
@@ -3464,7 +3427,7 @@ authSubmitBtn.onclick = async () => {
             authMessage.style.display = 'block';
         }
     } catch (error) {
-        authMessage.innerHTML = "Server connection error. Click <b>Continue as Guest</b> below to explore without a backend.";
+        authMessage.innerText = "Server connection error. Is backend running?";
         authMessage.style.display = 'block';
     } finally {
         authSubmitBtn.innerText = isLoginMode ? "Login" : "Create Account";
@@ -3983,77 +3946,12 @@ missionModeBtn.onclick = () => {
 
 /* ================= AI STREAM ROUTING ================= */
 async function checkAndRouteAI(payload) {
-    const customKey = (localStorage.getItem('logical_ai_custom_key') || '').trim();
     const token = localStorage.getItem('logical_ai_token');
-    
-    // Attempt backend first
-    let backendErr = null;
-    try {
-        const backendRes = await fetch(`${API_BASE_URL}/api/ask`, { 
-            method: "POST", 
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }, 
-            body: JSON.stringify(payload), signal: currentAbortController.signal 
-        });
-        if (backendRes.ok || backendRes.status === 401) {
-            return backendRes;
-        }
-        backendErr = new Error("Backend responded with status " + backendRes.status);
-    } catch (e) {
-        backendErr = e;
-    }
-    
-    // Direct Gemini fallback if backend failed or unreachable
-    if (customKey) {
-        try {
-            const geminiRes = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${customKey}`
-                },
-                body: JSON.stringify({
-                    model: "gemini-2.5-flash",
-                    messages: payload.messages,
-                    stream: true
-                }),
-                signal: currentAbortController.signal
-            });
-            
-            if (!geminiRes.ok) {
-                const errJson = await geminiRes.json().catch(() => ({}));
-                throw new Error(errJson.error?.message || ("Gemini API error (" + geminiRes.status + ")"));
-            }
-            
-            // Transform SSE data stream into plain text chunk stream
-            const transformStream = new TransformStream({
-                transform(chunk, controller) {
-                    const text = new TextDecoder().decode(chunk);
-                    const lines = text.split('\n');
-                    for (const line of lines) {
-                        const trimmed = line.trim();
-                        if (trimmed.startsWith('data: ') && !trimmed.includes('[DONE]')) {
-                            try {
-                                const parsed = JSON.parse(trimmed.slice(6));
-                                const content = parsed.choices?.[0]?.delta?.content || '';
-                                if (content) controller.enqueue(new TextEncoder().encode(content));
-                            } catch(err) {}
-                        }
-                    }
-                }
-            });
-            return new Response(geminiRes.body.pipeThrough(transformStream), {
-                status: 200,
-                headers: { 'Content-Type': 'text/plain' }
-            });
-        } catch (geminiErr) {
-            throw geminiErr;
-        }
-    }
-
-    if (backendErr) {
-        throw new Error("Backend server is not running and no Gemini API Key is configured. Please deploy your backend or enter your Gemini API Key in Settings.");
-    }
-    throw new Error("Unable to establish AI connection.");
+    return fetch(`${API_BASE_URL}/api/ask`, { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }, 
+        body: JSON.stringify(payload), signal: currentAbortController.signal 
+    });
 }
 
 /* ================= APP STATE & UI LOGIC ================= */
@@ -4233,16 +4131,6 @@ async function refreshAiProviderStatus() {
     
     if (!statusEl) return;
     
-    const customKey = (localStorage.getItem('logical_ai_custom_key') || '').trim();
-    const customKeyInput = document.getElementById("settingsCustomApiKey");
-    const backendUrlInput = document.getElementById("settingsBackendUrl");
-    if (customKeyInput && !customKeyInput.value && customKey) {
-        customKeyInput.value = customKey;
-    }
-    if (backendUrlInput && !backendUrlInput.value) {
-        backendUrlInput.value = localStorage.getItem('logical_ai_backend_url') || '';
-    }
-    
     try {
         const res = await fetch(`${API_BASE_URL}/api/ai-status`);
         if (!res.ok) throw new Error("Status " + res.status);
@@ -4251,9 +4139,6 @@ async function refreshAiProviderStatus() {
         if (data.has_key) {
             statusEl.className = "setting-status-pill status-connected";
             if (statusText) statusText.innerText = "Connected";
-        } else if (customKey) {
-            statusEl.className = "setting-status-pill status-connected";
-            if (statusText) statusText.innerText = "Connected (Browser Key)";
         } else {
             statusEl.className = "setting-status-pill status-warning";
             if (statusText) statusText.innerText = "API Key Missing";
@@ -4267,60 +4152,13 @@ async function refreshAiProviderStatus() {
             modelEl.innerText = data.model;
         }
         if (engineEl) {
-            engineEl.innerText = data.has_key ? "Live Streaming (SSE)" : (customKey ? "Browser Direct Mode" : "Configuration Pending");
+            engineEl.innerText = data.has_key ? "Live Streaming (SSE)" : "Configuration Pending";
         }
     } catch (err) {
-        if (customKey) {
-            statusEl.className = "setting-status-pill status-connected";
-            if (statusText) statusText.innerText = "Connected (Direct)";
-            if (providerEl) providerEl.innerText = "Google Gemini";
-            if (modelEl) modelEl.innerText = "gemini-2.5-flash";
-            if (engineEl) engineEl.innerText = "Direct Browser Stream";
-        } else {
-            statusEl.className = "setting-status-pill status-error";
-            if (statusText) statusText.innerText = "Offline";
-            if (engineEl) engineEl.innerText = "Backend Unreachable";
-        }
+        statusEl.className = "setting-status-pill status-error";
+        if (statusText) statusText.innerText = "Offline";
+        if (engineEl) engineEl.innerText = "Backend Unreachable";
     }
-}
-
-const saveApiKeyBtn = document.getElementById("saveApiKeyBtn");
-if (saveApiKeyBtn) {
-    saveApiKeyBtn.onclick = () => {
-        const keyInput = document.getElementById("settingsCustomApiKey");
-        if (keyInput) {
-            const val = keyInput.value.trim();
-            if (val) {
-                localStorage.setItem('logical_ai_custom_key', val);
-                alert("Gemini API Key saved! Browser direct chat is now active.");
-            } else {
-                localStorage.removeItem('logical_ai_custom_key');
-                alert("Gemini API Key cleared.");
-            }
-            refreshAiProviderStatus();
-        }
-    };
-}
-
-const saveBackendUrlBtn = document.getElementById("saveBackendUrlBtn");
-if (saveBackendUrlBtn) {
-    saveBackendUrlBtn.onclick = () => {
-        const urlInput = document.getElementById("settingsBackendUrl");
-        if (urlInput) {
-            let val = urlInput.value.trim();
-            if (val) {
-                if (!val.startsWith('http')) val = 'https://' + val;
-                localStorage.setItem('logical_ai_backend_url', val);
-                API_BASE_URL = val;
-                alert("Backend URL set to: " + val);
-            } else {
-                localStorage.removeItem('logical_ai_backend_url');
-                API_BASE_URL = getActiveBackendUrl();
-                alert("Backend URL reset to default.");
-            }
-            refreshAiProviderStatus();
-        }
-    };
 }
 
 function updateSettingsUserInfo() {

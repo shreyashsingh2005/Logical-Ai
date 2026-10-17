@@ -18,7 +18,10 @@ import re
 import base64
 import io
 import time
-import psutil  # Required for Jarvis Telemetry
+try:
+    import psutil
+except Exception:
+    psutil = None
 from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -81,7 +84,13 @@ except Exception as e:
 # ==========================================
 # 2. DATABASE & SECURITY SETUP
 # ==========================================
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logical_ai.db")
+def get_db_path():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    if os.environ.get("VERCEL") or not os.access(base_dir, os.W_OK):
+        return "/tmp/logical_ai.db"
+    return os.path.join(base_dir, "logical_ai.db")
+
+DB_PATH = get_db_path()
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -432,10 +441,12 @@ def read_frontend():
     raise HTTPException(status_code=404, detail="index.html not found")
 
 @app.get("/api/ai-status")
+@app.get("/ai-status")
 def read_ai_status():
     return get_ai_provider_status()
 
 @app.post("/api/register")
+@app.post("/register")
 def register(user: UserAuth, db: Session = Depends(get_db)):
     raw_email = (user.email or "").strip()
     raw_pwd = user.password or ""
@@ -464,6 +475,7 @@ def register(user: UserAuth, db: Session = Depends(get_db)):
     return {"message": "Account created successfully", "token": token}
 
 @app.post("/api/login")
+@app.post("/login")
 def login(user: UserAuth, db: Session = Depends(get_db)):
     raw_email = (user.email or "").strip()
     raw_pwd = user.password or ""
@@ -484,10 +496,12 @@ def login(user: UserAuth, db: Session = Depends(get_db)):
     return {"message": "Login successful", "token": token}
 
 @app.post("/api/ask")
+@app.post("/ask")
 async def ask_ai(request: AskRequest, current_user: str = Depends(verify_token)):
     return StreamingResponse(generate_smart_stream(request, current_user), media_type="text/event-stream")
 
 @app.post("/api/execute")
+@app.post("/execute")
 async def execute_code(request: CodeExecutionRequest, current_user: str = Depends(verify_token)):
     print(f"⚙️ [EXECUTION]: Running {request.language} code for user: {current_user}")
     

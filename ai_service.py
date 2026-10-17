@@ -10,8 +10,10 @@ load_dotenv()
 def get_ai_config() -> dict:
     # Hot-reload .env if edited while server is running
     load_dotenv(override=True)
-    provider = os.getenv("AI_PROVIDER", "openai").strip().lower()
-    api_key = os.getenv("AI_API_KEY", "").strip()
+    gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
+    api_key = os.getenv("AI_API_KEY", "").strip() or gemini_key
+    default_provider = "gemini" if (gemini_key or "AI_API_KEY" in os.environ) else "openai"
+    provider = os.getenv("AI_PROVIDER", default_provider).strip().lower()
     base_url = os.getenv("AI_BASE_URL", "").strip()
     model = os.getenv("AI_MODEL", "").strip()
 
