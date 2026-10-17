@@ -23,6 +23,9 @@
 <style>
 /* ================= 🎨 DESIGN SYSTEM & WCAG AA TOKENS ================= */
 :root { 
+    --app-height: 100dvh;
+    --app-top: 0px;
+    --app-left: 0px;
     --vvh: 100dvh;
     --bg-1: #090d14;
     --bg-2: #0e131d;
@@ -158,11 +161,14 @@ input:focus-visible, textarea:focus-visible {
 html, body { 
     background: var(--bg-1);
     color: var(--text); 
-    height: 100%;
-    height: var(--vvh, 100dvh);
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
-    max-width: 100%;
+    height: 100%;
     overflow: hidden; 
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
     transition: background 0.3s ease, color 0.3s ease; 
     -webkit-font-smoothing: antialiased; 
     -moz-osx-font-smoothing: grayscale;
@@ -205,12 +211,14 @@ button, .menu-toggle, .header-btn, .sugg-card, .historyItem, .action-btn, #send,
 /* ================= LAYOUT & SIDEBAR ================= */
 #app { 
     display: flex; 
-    height: 100%;
-    height: var(--vvh, 100dvh);
+    position: fixed;
+    top: var(--app-top, 0px);
+    left: var(--app-left, 0px);
     width: 100%; 
     max-width: 100%;
+    height: 100%;
+    height: var(--app-height, 100dvh);
     overflow: hidden; 
-    position: relative; 
 }
 
 #sidebar { 
@@ -226,21 +234,20 @@ button, .menu-toggle, .header-btn, .sugg-card, .historyItem, .action-btn, #send,
     z-index: 1000; 
     will-change: margin-left, transform;
     height: 100%;
-    height: var(--vvh, 100dvh);
     box-sizing: border-box;
     user-select: none;
     overflow: hidden;
 }
 
 #main { 
-    flex: 1; 
+    flex: 1 1 0%; 
     display: flex; 
     flex-direction: column; 
     position: relative; 
     width: 100%;
     min-width: 0;
     height: 100%;
-    height: var(--vvh, 100dvh);
+    min-height: 0;
     transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1); 
     overflow: hidden;
 }
@@ -967,7 +974,7 @@ body.light .chat-dropdown {
     inset: 0;
     width: 100%;
     height: 100%;
-    height: var(--vvh, 100dvh);
+    height: var(--app-height, 100dvh);
     background: rgba(0, 0, 0, 0.65);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -2346,7 +2353,7 @@ body.light .aiText :not(pre) > code {
     inset: 0;
     width: 100%; 
     height: 100%;
-    height: var(--vvh, 100dvh);
+    height: var(--app-height, 100dvh);
     background: rgba(0,0,0,0.8); 
     backdrop-filter: blur(15px); 
     -webkit-backdrop-filter: blur(15px);
@@ -2549,6 +2556,14 @@ body.light #stdinInput::placeholder {
     position: relative; 
     z-index: 20; 
     box-sizing: border-box;
+}
+
+body.keyboard-open #inputContainer {
+    padding-bottom: 8px !important;
+}
+
+body.keyboard-open #scrollToBottom {
+    bottom: 76px !important;
 }
 
 .input-wrapper { 
@@ -2958,7 +2973,7 @@ body.light * {
     inset: 0; 
     width: 100%; 
     height: 100%; 
-    height: var(--vvh, 100dvh);
+    height: var(--app-height, 100dvh);
     background: rgba(8, 12, 20, 0.72);
     backdrop-filter: blur(14px); 
     -webkit-backdrop-filter: blur(14px);
@@ -3440,7 +3455,7 @@ body.light .auth-toggle-link {
 @media (max-width: 768px) {
     #app {
         height: 100%;
-        height: var(--vvh, 100dvh);
+        height: var(--app-height, 100dvh);
         width: 100%;
         max-width: 100%;
     }
@@ -4338,22 +4353,65 @@ document.getElementById('logoutBtn').onclick = () => {
 
 let isInitialStartup = true;
 
-function syncVisualViewportHeight() {
+function updateVisualViewport() {
     if (window.visualViewport) {
-        document.documentElement.style.setProperty('--vvh', `${window.visualViewport.height}px`);
+        const vv = window.visualViewport;
+        const height = Math.round(vv.height);
+        const offsetTop = Math.round(vv.offsetTop);
+        const offsetLeft = Math.round(vv.offsetLeft);
+
+        document.documentElement.style.setProperty('--app-height', `${height}px`);
+        document.documentElement.style.setProperty('--app-top', `${offsetTop}px`);
+        document.documentElement.style.setProperty('--app-left', `${offsetLeft}px`);
+        document.documentElement.style.setProperty('--vvh', `${height}px`);
+
+        // Detect if software keyboard is open
+        const isKeyboardOpen = (window.innerHeight - height) > 150;
+        document.body.classList.toggle('keyboard-open', isKeyboardOpen);
     } else {
-        document.documentElement.style.setProperty('--vvh', `${window.innerHeight}px`);
+        const height = window.innerHeight;
+        document.documentElement.style.setProperty('--app-height', `${height}px`);
+        document.documentElement.style.setProperty('--app-top', '0px');
+        document.documentElement.style.setProperty('--app-left', '0px');
+        document.documentElement.style.setProperty('--vvh', `${height}px`);
+        document.body.classList.remove('keyboard-open');
+    }
+
+    // Keep page window scroll locked at (0, 0)
+    if (window.scrollY !== 0 || window.scrollX !== 0) {
+        window.scrollTo(0, 0);
+    }
+
+    // Monaco editor resize handling if modal is visible
+    if (typeof monacoEditorInstance !== 'undefined' && monacoEditorInstance) {
+        const previewModal = document.getElementById('previewModal');
+        if (previewModal && previewModal.style.display !== 'none') {
+            monacoEditorInstance.layout();
+        }
+    }
+
+    // Clean up sidebar backdrop on desktop viewport widths
+    if (window.innerWidth > 768) {
+        const sbb = document.getElementById('sidebarBackdrop');
+        if (sbb) sbb.classList.remove('active');
     }
 }
+
 if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', syncVisualViewportHeight);
-    window.visualViewport.addEventListener('scroll', syncVisualViewportHeight);
+    window.visualViewport.addEventListener('resize', updateVisualViewport);
+    window.visualViewport.addEventListener('scroll', updateVisualViewport);
 }
-window.addEventListener('resize', syncVisualViewportHeight);
-syncVisualViewportHeight();
+window.addEventListener('resize', updateVisualViewport);
+window.addEventListener('orientationchange', () => {
+    setTimeout(() => {
+        updateVisualViewport();
+        if (typeof scrollForce === 'function') scrollForce(false);
+    }, 150);
+});
+updateVisualViewport();
 
 window.addEventListener('DOMContentLoaded', () => {
-    syncVisualViewportHeight();
+    updateVisualViewport();
     const sb = document.getElementById("sidebar");
     const sbb = document.getElementById("sidebarBackdrop");
     if (window.innerWidth <= 768) {
@@ -5286,7 +5344,34 @@ window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', e 
     applyTheme(savedTheme);
 })();
 
-msg.oninput=()=>{ msg.style.height="auto"; msg.style.height=Math.min(msg.scrollHeight,220)+"px"; };
+msg.oninput = () => { 
+    msg.style.height = "auto"; 
+    msg.style.height = Math.min(msg.scrollHeight, 180) + "px"; 
+    scrollForce(false);
+};
+
+msg.addEventListener('focus', () => {
+    window.scrollTo(0, 0);
+    updateVisualViewport();
+    setTimeout(() => {
+        window.scrollTo(0, 0);
+        updateVisualViewport();
+        scrollForce(false);
+    }, 100);
+    setTimeout(() => {
+        window.scrollTo(0, 0);
+        updateVisualViewport();
+        scrollForce(false);
+    }, 320);
+});
+
+msg.addEventListener('blur', () => {
+    setTimeout(() => {
+        window.scrollTo(0, 0);
+        updateVisualViewport();
+        scrollForce(false);
+    }, 100);
+});
 
 window.usePrompt = function(text, autoSend = false) { 
     if (!text || isInitialStartup) return;
@@ -5769,25 +5854,10 @@ async function sendMsg(){
   }
 }
 
-// Universal Window Resize & Orientation Change Handling
-window.addEventListener('resize', () => {
-    syncVisualViewportHeight();
-    if (monacoEditorInstance && document.getElementById('previewModal') && document.getElementById('previewModal').style.display !== 'none') {
-        monacoEditorInstance.layout();
-    }
-    if (window.innerWidth > 768) {
-        if (typeof sidebarBackdrop !== 'undefined' && sidebarBackdrop) {
-            sidebarBackdrop.classList.remove('active');
-        }
-    }
-});
-
+// Universal Orientation Change Handling
 window.addEventListener('orientationchange', () => {
     setTimeout(() => {
-        syncVisualViewportHeight();
-        if (monacoEditorInstance && document.getElementById('previewModal') && document.getElementById('previewModal').style.display !== 'none') {
-            monacoEditorInstance.layout();
-        }
+        updateVisualViewport();
         scrollForce(false);
     }, 150);
 });
