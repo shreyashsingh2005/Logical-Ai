@@ -4182,6 +4182,10 @@ Object.defineProperty(window, '_LOGICAL_AI_CREATOR', {
 </div>
 
 <script>
+// Hoisted global references to prevent TDZ ReferenceError
+var monacoEditorInstance = null;
+var currentAbortController = null;
+
 // ================= 🔥 DYNAMIC ENVIRONMENT CONFIG 🔥 =================
 const API_BASE_URL = (window.location.protocol.startsWith('http') && window.location.port === "8000")
     ? window.location.origin
@@ -4521,7 +4525,7 @@ async function loadChatsFromDB() {
 }
 
 // Startup execution with persistent active session restoration (No random search)
-(async function startup() {
+async function startup() {
     try {
         await initDB();
         const loadedChats = await loadChatsFromDB();
@@ -4551,7 +4555,7 @@ async function loadChatsFromDB() {
         console.error("Startup error:", e);
         createNewChat();
     }
-})();
+}
 
 /* ================= JARVIS DASHBOARD LOGIC ================= */
 const jarvisDashboard = document.getElementById('jarvisDashboard');
@@ -4596,9 +4600,15 @@ setInterval(() => {
 
 /* ================= 🎙️ PREMIUM AI SPEECH ENGINE 🎙️ ================= */
 let voices = [];
-function populateVoices() { voices = window.speechSynthesis.getVoices(); }
+function populateVoices() { 
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
+        try { voices = window.speechSynthesis.getVoices() || []; } catch(e) { voices = []; }
+    }
+}
 populateVoices();
-if (speechSynthesis.onvoiceschanged !== undefined) { speechSynthesis.onvoiceschanged = populateVoices; }
+if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) { 
+    window.speechSynthesis.onvoiceschanged = populateVoices; 
+}
 
 function getBestVoice() {
     if (!voices || voices.length === 0) return null;
@@ -4750,7 +4760,7 @@ micBtn.onclick = async () => {
 /* ================= MONACO & LIVE SANDBOX SETUP ================= */
 marked.setOptions({ breaks: true, gfm: true });
 
-let monacoEditorInstance = null;
+// monacoEditorInstance is hoisted at script top
 window.currentSandboxLang = 'javascript';
 window.lastExecutionError = ""; 
 window.lastExecutionCode = "";  
@@ -5005,7 +5015,7 @@ const themeToggleIcon = document.getElementById("themeToggleIcon");
 let isLoading=false;
 let currentBase64Image = null;
 let currentDocument = null; 
-let currentAbortController = null;
+// currentAbortController is hoisted at script top
 
 let isUserScrolling = false;
 chatContainer.addEventListener('wheel', () => { isUserScrolling = true; }, { passive: true });
@@ -5334,9 +5344,18 @@ if (theme) {
     };
 }
 
-window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', e => {
-    if (theme && theme.value === "system") applyTheme("system");
-});
+try {
+    const colorSchemeQuery = window.matchMedia('(prefers-color-scheme: light)');
+    if (colorSchemeQuery.addEventListener) {
+        colorSchemeQuery.addEventListener('change', e => {
+            if (theme && theme.value === "system") applyTheme("system");
+        });
+    } else if (colorSchemeQuery.addListener) {
+        colorSchemeQuery.addListener(e => {
+            if (theme && theme.value === "system") applyTheme("system");
+        });
+    }
+} catch (e) {}
 
 (function() {
     const savedTheme = localStorage.getItem("theme") || "dark";
@@ -5861,6 +5880,9 @@ window.addEventListener('orientationchange', () => {
         scrollForce(false);
     }, 150);
 });
+
+// Run startup after all DOM elements, handlers, and variables are initialized
+startup();
 
 </script>
 </body>
